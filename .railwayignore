@@ -1,0 +1,21 @@
+# Files to ignore when deploying to Railway
+*.md
+*.sh
+.git
+.gitignore
+test_cases/
+*.py
+requirements.txt
+__pycache__/
+*.pyc
+.env
+*.log
+docker-compose.yml
+nginx.conf
+language-packages-backup/
+test/
+*.pps
+install*.sh
+Dockerfile.piston-with-runtimes
+.dockerignore
+

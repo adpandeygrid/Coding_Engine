@@ -1,0 +1,17 @@
+#!/usr/bin/env -S piston ppman spec
+
+# Custom Piston Packages Spec
+# Installs runtimes: GCC (C/C++), Python, JavaScript (Node.js), and Java
+
+# GCC for C/C++ compilation
+gcc *
+
+# Python for Python execution
+python *
+
+# Node.js for JavaScript execution
+node *
+
+# Java for Java execution
+java *
+

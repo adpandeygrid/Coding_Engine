@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Code Judge - Online Coding Platform</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>💻 Code Judge</h1>
+            <div class="header-controls">
+                <select id="apiUrl">
+                    <option value="http://localhost:2000">Local API (http://localhost:2000)</option>
+                    <option value="http://localhost:2001">Local API Direct (http://localhost:2001)</option>
+                    <option value="">Railway API (set below)</option>
+                </select>
+                <input type="text" id="customApiUrl" placeholder="https://your-app.railway.app" style="display:none;">
+            </div>
+        </header>
+
+        <div class="main-content">
+            <!-- Problem List Sidebar -->
+            <div class="sidebar">
+                <h2>Problems</h2>
+                <ul id="problemList">
+                    <!-- Problems will be loaded here -->
+                </ul>
+            </div>
+
+            <!-- Problem & Editor Area -->
+            <div class="editor-area">
+                <!-- Problem Description -->
+                <div class="problem-panel">
+                    <div class="problem-header">
+                        <h2 id="problemTitle">Select a problem</h2>
+                        <div class="problem-meta">
+                            <span id="problemDifficulty" class="difficulty easy">Easy</span>
+                        </div>
+                    </div>
+                    <div id="problemDescription" class="problem-description">
+                        <p>Select a problem from the sidebar to get started.</p>
+                    </div>
+                    <div class="test-cases-preview">
+                        <h3>Test Cases</h3>
+                        <div id="testCasesPreview"></div>
+                    </div>
+                </div>
+
+                <!-- Code Editor -->
+                <div class="editor-panel">
+                    <div class="editor-header">
+                        <select id="languageSelect">
+                            <option value="cpp">C++</option>
+                            <option value="python">Python</option>
+                            <option value="javascript">JavaScript</option>
+                            <option value="java">Java</option>
+                        </select>
+                        <button id="runBtn" class="btn btn-primary">▶ Run</button>
+                        <button id="submitBtn" class="btn btn-success">✓ Submit</button>
+                    </div>
+                    <textarea id="codeEditor" placeholder="// Write your code here..."></textarea>
+                </div>
+            </div>
+
+            <!-- Results Panel -->
+            <div class="results-panel">
+                <div class="results-header">
+                    <h3>Results</h3>
+                    <button id="clearResults" class="btn btn-secondary">Clear</button>
+                </div>
+                <div id="resultsContent" class="results-content">
+                    <p class="placeholder">Run or submit your code to see results here.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
+

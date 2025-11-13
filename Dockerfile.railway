@@ -1,0 +1,29 @@
+# Dockerfile for Railway deployment
+# This includes the Piston API with pre-installed runtimes
+#
+# IMPORTANT: For Railway deployment, language-packages/ must be committed to git
+# or built during the Docker build process. See RAILWAY_DEPLOYMENT_FIX.md
+
+FROM ghcr.io/engineer-man/piston:latest
+
+# Create packages directory first
+RUN mkdir -p /piston/packages
+
+# Copy pre-installed packages (if available in build context)
+# If this fails, packages need to be committed to git or built during build
+# Note: COPY command doesn't support || operator, so this will fail if packages don't exist
+COPY language-packages/ /piston/packages/
+
+# Fix Java permission issues (remove problematic files)
+# Only run if Java packages exist
+RUN if [ -d "/piston/packages/java" ] && [ "$(ls -A /piston/packages/java)" ]; then \
+        find /piston/packages/java -name "*.jsa" -delete 2>/dev/null || true && \
+        rm -rf /piston/packages/java/*/legal 2>/dev/null || true; \
+    fi
+
+# Expose port
+EXPOSE 2000
+
+# Use the default entrypoint from the base image
+# The base image already has the correct CMD
+

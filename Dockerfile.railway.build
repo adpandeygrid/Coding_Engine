@@ -1,0 +1,43 @@
+# Dockerfile for Railway deployment - Builds packages during build
+# This avoids needing to commit large packages to git
+
+FROM ghcr.io/engineer-man/piston:latest
+
+# Install Node.js and npm for Piston CLI
+RUN apt-get update && \
+    apt-get install -y nodejs npm curl && \
+    npm install -g npm@latest && \
+    rm -rf /var/lib/apt/lists/*
+
+# Clone Piston repository for CLI tools
+WORKDIR /tmp
+RUN git clone --depth 1 https://github.com/engineer-man/piston.git piston-repo
+
+# Install Piston CLI
+WORKDIR /tmp/piston-repo/cli
+RUN npm install
+
+# Create spec file for runtime installation
+RUN echo '#!/usr/bin/env -S piston ppman spec\n\n# Install required runtimes\ngcc *\npython *\nnode *\njava *' > /tmp/piston-spec.pps
+
+# Build and install runtimes using Piston builder
+WORKDIR /tmp/piston-repo/builder
+RUN chmod +x build.sh && \
+    ./build.sh /tmp/piston-spec.pps
+
+# Copy built packages to Piston packages directory
+RUN cp -r /tmp/piston-repo/builder/packages/* /piston/packages/ || true
+
+# Fix Java permission issues (remove problematic files)
+RUN find /piston/packages/java -name "*.jsa" -delete 2>/dev/null || true && \
+    rm -rf /piston/packages/java/*/legal 2>/dev/null || true
+
+# Clean up
+RUN rm -rf /tmp/piston-repo
+
+# Expose port
+EXPOSE 2000
+
+# Use the default entrypoint from the base image
+# The base image already has the correct CMD
+

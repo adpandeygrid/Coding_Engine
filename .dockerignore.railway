@@ -1,0 +1,52 @@
+# Docker ignore for Railway deployment
+# Keep only essential files
+
+# Documentation
+*.md
+README*
+
+# Scripts (not needed in container)
+*.sh
+!fix-java.sh
+
+# Python files (testing only)
+*.py
+requirements.txt
+__pycache__/
+*.pyc
+
+# Test files
+test_cases/
+test/
+
+# Git
+.git
+.gitignore
+
+# Config files (not needed)
+.env
+*.log
+docker-compose.yml
+nginx.conf
+railway.json
+railway.toml
+.railwayignore
+
+# Backup files
+language-packages-backup/
+*.backup
+
+# Spec files
+*.pps
+
+# Install scripts
+install*.sh
+
+# Other Dockerfiles
+Dockerfile.piston-with-runtimes
+
+# Keep these:
+# - Dockerfile.railway
+# - language-packages/
+# - fix-java.sh (if needed)
+

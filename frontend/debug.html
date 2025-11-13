@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Output Comparison</title>
+    <style>
+        body {
+            font-family: monospace;
+            padding: 20px;
+            background: #1e1e1e;
+            color: #d4d4d4;
+        }
+        .test-case {
+            margin: 20px 0;
+            padding: 15px;
+            background: #252526;
+            border-radius: 5px;
+        }
+        pre {
+            background: #1e1e1e;
+            padding: 10px;
+            border-radius: 3px;
+            overflow-x: auto;
+        }
+        .match { color: #51cf66; }
+        .mismatch { color: #ff6b6b; }
+        button {
+            padding: 10px 20px;
+            background: #007acc;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 10px 5px;
+        }
+        button:hover { opacity: 0.8; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Output Comparison Debugger</h1>
+    <button onclick="testAll()">Test All Cases</button>
+    <button onclick="testCase(1)">Test Case 1</button>
+    <div id="results"></div>
+
+    <script>
+        const API_URL = 'http://localhost:2000';
+
+        function normalizeOutput(output) {
+            if (!output) return '';
+            let normalized = output.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+            let lines = normalized.split('\n');
+            while (lines.length > 0 && lines[lines.length - 1].trim() === '') {
+                lines.pop();
+            }
+            normalized = lines.map(line => line.trimEnd()).join('\n');
+            return normalized;
+        }
+
+        async function testCase(num) {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '<p>Loading test case ' + num + '...</p>';
+
+            try {
+                // Load test case files
+                const inputResponse = await fetch(`/test_cases/input${num}.txt`);
+                const outputResponse = await fetch(`/test_cases/output${num}.txt`);
+                
+                if (!inputResponse.ok || !outputResponse.ok) {
+                    throw new Error('Could not load test case files');
+                }
+
+                const input = (await inputResponse.text()).trim();
+                const expectedOutput = await outputResponse.text();
+
+                // Execute code
+                const code = `n = int(input())\nfor i in range(n):\n    print("Hello")`;
+                
+                const response = await fetch(`${API_URL}/api/v2/execute`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        language: 'python',
+                        version: '3.12.0',
+                        files: [{ content: code }],
+                        stdin: input
+                    })
+                });
+
+                const data = await response.json();
+                const actualOutput = data.run.stdout || '';
+
+                // Normalize
+                const normalizedActual = normalizeOutput(actualOutput);
+                const normalizedExpected = normalizeOutput(expectedOutput);
+                const match = normalizedActual === normalizedExpected;
+
+                // Display results
+                const testDiv = document.createElement('div');
+                testDiv.className = 'test-case';
+                testDiv.innerHTML = `
+                    <h2>Test Case ${num} <span class="${match ? 'match' : 'mismatch'}">${match ? '✅ MATCH' : '❌ MISMATCH'}</span></h2>
+                    <p><strong>Input:</strong> <code>${input}</code></p>
+                    
+                    <h3>Raw Outputs:</h3>
+                    <p><strong>Expected (raw):</strong></p>
+                    <pre>${JSON.stringify(expectedOutput)}</pre>
+                    <p><strong>Actual (raw):</strong></p>
+                    <pre>${JSON.stringify(actualOutput)}</pre>
+                    
+                    <h3>Normalized Outputs:</h3>
+                    <p><strong>Expected (normalized):</strong></p>
+                    <pre>${JSON.stringify(normalizedExpected)}</pre>
+                    <p><strong>Actual (normalized):</strong></p>
+                    <pre>${JSON.stringify(normalizedActual)}</pre>
+                    
+                    <h3>Comparison:</h3>
+                    <p><strong>Match:</strong> <span class="${match ? 'match' : 'mismatch'}">${match}</span></p>
+                    <p><strong>Expected length:</strong> ${normalizedExpected.length}</p>
+                    <p><strong>Actual length:</strong> ${normalizedActual.length}</p>
+                    
+                    <h3>Character-by-Character:</h3>
+                    <p><strong>Expected chars:</strong> ${Array.from(normalizedExpected).map(c => c === '\n' ? '\\n' : c === ' ' ? '␣' : c).join('')}</p>
+                    <p><strong>Actual chars:</strong> ${Array.from(normalizedActual).map(c => c === '\n' ? '\\n' : c === ' ' ? '␣' : c).join('')}</p>
+                    
+                    <h3>Char Codes:</h3>
+                    <p><strong>Expected:</strong> [${Array.from(normalizedExpected).map(c => c.charCodeAt(0)).join(', ')}]</p>
+                    <p><strong>Actual:</strong> [${Array.from(normalizedActual).map(c => c.charCodeAt(0)).join(', ')}]</p>
+                `;
+                
+                resultsDiv.innerHTML = '';
+                resultsDiv.appendChild(testDiv);
+            } catch (error) {
+                resultsDiv.innerHTML = `<div class="test-case"><p style="color: #ff6b6b;">Error: ${error.message}</p></div>`;
+            }
+        }
+
+        async function testAll() {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '<p>Testing all cases...</p>';
+            
+            let html = '';
+            for (let i = 1; i <= 11; i++) {
+                try {
+                    const inputResponse = await fetch(`/test_cases/input${i}.txt`);
+                    const outputResponse = await fetch(`/test_cases/output${i}.txt`);
+                    
+                    if (!inputResponse.ok || !outputResponse.ok) continue;
+                    
+                    const input = (await inputResponse.text()).trim();
+                    const expectedOutput = await outputResponse.text();
+                    
+                    const code = `n = int(input())\nfor i in range(n):\n    print("Hello")`;
+                    
+                    const response = await fetch(`${API_URL}/api/v2/execute`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            language: 'python',
+                            version: '3.12.0',
+                            files: [{ content: code }],
+                            stdin: input
+                        })
+                    });
+                    
+                    const data = await response.json();
+                    const actualOutput = data.run.stdout || '';
+                    
+                    const normalizedActual = normalizeOutput(actualOutput);
+                    const normalizedExpected = normalizeOutput(expectedOutput);
+                    const match = normalizedActual === normalizedExpected;
+                    
+                    html += `
+                        <div class="test-case">
+                            <h3>Test Case ${i} <span class="${match ? 'match' : 'mismatch'}">${match ? '✅' : '❌'}</span></h3>
+                            <p>Input: <code>${input}</code></p>
+                            <p>Match: <span class="${match ? 'match' : 'mismatch'}">${match}</span></p>
+                            <p>Expected length: ${normalizedExpected.length}, Actual length: ${normalizedActual.length}</p>
+                            ${!match ? `<details><summary>Details</summary>
+                                <p>Expected: ${JSON.stringify(normalizedExpected)}</p>
+                                <p>Actual: ${JSON.stringify(normalizedActual)}</p>
+                            </details>` : ''}
+                        </div>
+                    `;
+                } catch (error) {
+                    html += `<div class="test-case"><p style="color: #ff6b6b;">Test ${i} Error: ${error.message}</p></div>`;
+                }
+            }
+            
+            resultsDiv.innerHTML = html;
+        }
+
+        // Auto-run test case 1 on load
+        window.addEventListener('load', () => testCase(1));
+    </script>
+</body>
+</html>
+

@@ -1,0 +1,43 @@
+services:
+  piston:
+    image: ghcr.io/engineer-man/piston:latest
+    container_name: piston-api
+    platform: linux/amd64  # Use AMD64 platform (works on ARM64 via emulation)
+    ports:
+      - "2001:2000"  # Expose directly for CLI access (bypass NGINX)
+    expose:
+      - "2000"  # Also expose to nginx
+    volumes:
+      - ./language-packages:/piston/packages  # Bind mount for packages (will be populated from builder)
+      - piston_jobs:/piston/jobs
+      - piston_isolate:/piston/isolate
+    environment:
+      - PISTON_REPO_URL=https://github.com/engineer-man/piston
+    restart: unless-stopped
+    privileged: true  # Required for isolate to work properly
+    networks:
+      - piston-network
+
+  nginx:
+    image: nginx:alpine
+    container_name: piston-nginx
+    platform: linux/amd64
+    ports:
+      - "2000:80"  # Map host port 2000 to nginx port 80
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - piston
+    restart: unless-stopped
+    networks:
+      - piston-network
+
+volumes:
+  # piston_packages: Now using bind mount ./language-packages
+  piston_jobs:
+  piston_isolate:
+
+networks:
+  piston-network:
+    driver: bridge
+
