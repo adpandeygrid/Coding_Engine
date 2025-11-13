@@ -1,0 +1,30 @@
+# Git LFS tracking for Java language package
+# Track all binary and large files in language-packages/java/
+
+# Shared libraries
+language-packages/java/**/*.so filter=lfs diff=lfs merge=lfs -text
+
+# Java archives and modules
+language-packages/java/**/*.jar filter=lfs diff=lfs merge=lfs -text
+language-packages/java/**/*.jmod filter=lfs diff=lfs merge=lfs -text
+
+# Archive files
+language-packages/java/**/*.tar.gz filter=lfs diff=lfs merge=lfs -text
+language-packages/java/**/*.zip filter=lfs diff=lfs merge=lfs -text
+
+# Binary executables in bin directory
+language-packages/java/**/bin/* filter=lfs diff=lfs merge=lfs -text
+
+# Other binary files
+language-packages/java/**/jexec filter=lfs diff=lfs merge=lfs -text
+language-packages/java/**/jspawnhelper filter=lfs diff=lfs merge=lfs -text
+language-packages/java/**/modules filter=lfs diff=lfs merge=lfs -text
+
+# Binary data files
+language-packages/java/**/*.dat filter=lfs diff=lfs merge=lfs -text
+language-packages/java/**/*.certs filter=lfs diff=lfs merge=lfs -text
+
+# Additional binary files without standard extensions
+language-packages/java/**/ct.sym filter=lfs diff=lfs merge=lfs -text
+language-packages/java/**/cacerts filter=lfs diff=lfs merge=lfs -text
+
