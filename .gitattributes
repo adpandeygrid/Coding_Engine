@@ -28,3 +28,28 @@ language-packages/java/**/*.certs filter=lfs diff=lfs merge=lfs -text
 language-packages/java/**/ct.sym filter=lfs diff=lfs merge=lfs -text
 language-packages/java/**/cacerts filter=lfs diff=lfs merge=lfs -text
 
+# Git LFS tracking for Python language package
+# Track all binary and large files in language-packages/python/
+
+# Shared libraries and extensions
+language-packages/python/**/*.so filter=lfs diff=lfs merge=lfs -text
+
+# Static libraries
+language-packages/python/**/*.a filter=lfs diff=lfs merge=lfs -text
+
+# Python bytecode (compiled Python files)
+language-packages/python/**/*.pyc filter=lfs diff=lfs merge=lfs -text
+language-packages/python/**/*.pyo filter=lfs diff=lfs merge=lfs -text
+
+# Archive files
+language-packages/python/**/*.tar filter=lfs diff=lfs merge=lfs -text
+language-packages/python/**/*.tar.gz filter=lfs diff=lfs merge=lfs -text
+language-packages/python/**/*.tar.xz filter=lfs diff=lfs merge=lfs -text
+language-packages/python/**/*.tar.bz2 filter=lfs diff=lfs merge=lfs -text
+language-packages/python/**/*.zip filter=lfs diff=lfs merge=lfs -text
+language-packages/python/**/*.whl filter=lfs diff=lfs merge=lfs -text
+language-packages/python/**/*.egg filter=lfs diff=lfs merge=lfs -text
+
+# Binary executables in bin directory
+language-packages/python/**/bin/python* filter=lfs diff=lfs merge=lfs -text
+
