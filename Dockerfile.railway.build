@@ -43,6 +43,25 @@ RUN mkdir -p /piston/isolate /piston/jobs && \
 # Remove any .DS_Store files that might cause issues
 RUN find /piston/packages -name ".DS_Store" -delete 2>/dev/null || true
 
+# Create isolate wrapper to disable cgroups when ISOLATE_NO_CG=1
+RUN echo '#!/bin/bash\n\
+# Wrapper script for isolate that removes --cg flag when ISOLATE_NO_CG=1\n\
+if [ "$ISOLATE_NO_CG" = "1" ]; then\n\
+    # Remove --cg and -cg flags from arguments\n\
+    ARGS=()\n\
+    for arg in "$@"; do\n\
+        if [ "$arg" != "--cg" ] && [ "$arg" != "-cg" ]; then\n\
+            ARGS+=("$arg")\n\
+        fi\n\
+    done\n\
+    exec /usr/bin/isolate "${ARGS[@]}"\n\
+else\n\
+    exec /usr/bin/isolate "$@"\n\
+fi' > /usr/local/bin/isolate && \
+    chmod +x /usr/local/bin/isolate && \
+    # Ensure /usr/local/bin is in PATH before /usr/bin
+    echo 'export PATH="/usr/local/bin:$PATH"' >> /etc/profile
+
 # Expose port (Railway will provide PORT env var)
 EXPOSE 2000
 ENV PORT=2000
@@ -89,8 +108,10 @@ echo "Checking jobs directory:"\n\
 ls -la /piston/jobs 2>&1 || echo "Jobs directory check failed"\n\
 echo "Testing isolate write permissions:"\n\
 touch /piston/isolate/test_write 2>&1 && rm -f /piston/isolate/test_write && echo "Write test: SUCCESS" || echo "Write test: FAILED"\n\
+# Ensure PATH includes /usr/local/bin (where our isolate wrapper is)\n\
+export PATH="/usr/local/bin:$PATH"\n\
 # Pass PORT and ISOLATE_NO_CG explicitly to ensure they're available to Node.js\n\
-exec su -- piston -c "ulimit -n 65536; export PORT=$PORT; export ISOLATE_NO_CG=1; node /piston_api/src" "$@"' > /entrypoint.sh && \
+exec su -- piston -c "ulimit -n 65536; export PATH=\"/usr/local/bin:\$PATH\"; export PORT=$PORT; export ISOLATE_NO_CG=1; node /piston_api/src" "$@"' > /entrypoint.sh && \
     chmod +x /entrypoint.sh
 
 ENTRYPOINT ["/entrypoint.sh"]
