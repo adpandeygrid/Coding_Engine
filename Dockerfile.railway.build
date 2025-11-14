@@ -43,8 +43,9 @@ RUN mkdir -p /piston/isolate /piston/jobs && \
 # Remove any .DS_Store files that might cause issues
 RUN find /piston/packages -name ".DS_Store" -delete 2>/dev/null || true
 
-# Expose port
+# Expose port (Railway will provide PORT env var)
 EXPOSE 2000
+ENV PORT=2000
 
 # Create a Railway-compatible entrypoint that handles cgroup limitations
 # Railway may not support cgroups, so we create a modified entrypoint
@@ -73,8 +74,10 @@ fi\n\
 # Set ownership\n\
 chown -R piston:piston /piston 2>/dev/null || true\n\
 \n\
-# Start Piston API\n\
-exec su -- piston -c "ulimit -n 65536 && node /piston_api/src" "$@"' > /entrypoint.sh && \
+# Start Piston API with Railway PORT support\n\
+# Railway provides PORT env var, Piston uses PORT env var if available\n\
+export PORT=${PORT:-2000}\n\
+exec su -- piston -c "ulimit -n 65536 && PORT=$PORT node /piston_api/src" "$@"' > /entrypoint.sh && \
     chmod +x /entrypoint.sh
 
 ENTRYPOINT ["/entrypoint.sh"]
