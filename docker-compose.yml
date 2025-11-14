@@ -13,11 +13,8 @@ services:
       - piston_isolate:/piston/isolate
     tmpfs:
       - /tmp
-    working_dir: /piston
     environment:
       - PISTON_REPO_URL=https://github.com/engineer-man/piston
-    entrypoint: ["/bin/sh", "-c"]
-    command: "mkdir -p /piston/isolate /piston/jobs && chmod -R 777 /piston/isolate /piston/jobs && exec /piston/piston"
     restart: unless-stopped
     privileged: true  # Required for isolate to work properly
     networks:

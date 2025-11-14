@@ -566,10 +566,10 @@ async function submitCode() {
 
 async function executeCode(code, input) {
     const languageMap = {
-        'cpp': { language: 'cpp', version: '10.2.0' },
-        'python': { language: 'python', version: '3.12.0' },
-        'javascript': { language: 'javascript', version: '20.11.1' },
-        'java': { language: 'java', version: '15.0.2' }
+        'cpp': { language: 'c++', version: '*' },  // Piston API uses 'c++' not 'cpp'
+        'python': { language: 'python', version: '*' },
+        'javascript': { language: 'javascript', version: '*' },
+        'java': { language: 'java', version: '*' }
     };
     
     const langConfig = languageMap[currentLanguage];
