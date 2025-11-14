@@ -32,8 +32,35 @@ RUN find /piston/packages -name ".DS_Store" -delete 2>/dev/null || true
 # Expose port
 EXPOSE 2000
 
-# Use entrypoint script to ensure directories exist at runtime
-RUN echo '#!/bin/sh\nmkdir -p /piston/isolate /piston/jobs\nchmod 777 /piston/isolate /piston/jobs 2>/dev/null || true\nexec /piston/piston' > /entrypoint.sh && \
+# Create a Railway-compatible entrypoint that handles cgroup limitations
+# Railway may not support cgroups, so we create a modified entrypoint
+RUN echo '#!/bin/bash\n\
+# Create piston directories\n\
+mkdir -p /piston/isolate /piston/jobs\n\
+chmod 777 /piston/isolate /piston/jobs 2>/dev/null || true\n\
+\n\
+# Check if cgroup v2 is available (Railway may not support it)\n\
+CGROUP_FS="/sys/fs/cgroup"\n\
+if [ -e "$CGROUP_FS" ] && [ ! -e "$CGROUP_FS/unified" ] && [ -e "$CGROUP_FS/cgroup.subtree_control" ]; then\n\
+    # Cgroup v2 is available, try to set it up\n\
+    cd /sys/fs/cgroup && \\\n\
+    mkdir -p isolate/ 2>/dev/null && \\\n\
+    echo 1 > isolate/cgroup.procs 2>/dev/null && \\\n\
+    echo "+cpuset +cpu +io +memory +pids" > cgroup.subtree_control 2>/dev/null && \\\n\
+    cd isolate && \\\n\
+    mkdir -p init 2>/dev/null && \\\n\
+    echo 1 > init/cgroup.procs 2>/dev/null && \\\n\
+    echo "+cpuset +memory" > cgroup.subtree_control 2>/dev/null && \\\n\
+    echo "Initialized cgroup" || echo "Cgroup setup skipped (may not be available on Railway)"\n\
+else\n\
+    echo "Cgroup v2 not available, skipping cgroup setup (this is normal on Railway)"\n\
+fi\n\
+\n\
+# Set ownership\n\
+chown -R piston:piston /piston 2>/dev/null || true\n\
+\n\
+# Start Piston API\n\
+exec su -- piston -c "ulimit -n 65536 && node /piston_api/src" "$@"' > /entrypoint.sh && \
     chmod +x /entrypoint.sh
 
 ENTRYPOINT ["/entrypoint.sh"]
