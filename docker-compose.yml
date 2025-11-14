@@ -17,12 +17,7 @@ services:
     environment:
       - PISTON_REPO_URL=https://github.com/engineer-man/piston
     entrypoint: ["/bin/sh", "-c"]
-    command: |
-      # Ensure directories exist and are writable (volumes are auto-created but may need permissions)
-      mkdir -p /piston/isolate /piston/jobs
-      chmod -R 777 /piston/isolate /piston/jobs
-      # Start Piston
-      exec /piston/piston
+    command: "mkdir -p /piston/isolate /piston/jobs && chmod -R 777 /piston/isolate /piston/jobs && exec /piston/piston"
     restart: unless-stopped
     privileged: true  # Required for isolate to work properly
     networks:
