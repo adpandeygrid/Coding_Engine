@@ -265,14 +265,30 @@ function setupEventListeners() {
     document.getElementById('apiUrl').addEventListener('change', (e) => {
         if (e.target.value === '') {
             document.getElementById('customApiUrl').style.display = 'block';
+            // Use the custom URL if it's already filled in
+            const customUrl = document.getElementById('customApiUrl').value.trim();
+            if (customUrl) {
+                let url = customUrl;
+                // If URL doesn't start with http:// or https://, add https://
+                if (!/^https?:\/\//.test(url)) {
+                    url = 'https://' + url;
+                    document.getElementById('customApiUrl').value = url;
+                }
+                apiUrl = url;
+                console.log('API URL set to (from custom field):', apiUrl);
+            } else {
+                // Default to localhost if custom field is empty
+                apiUrl = 'http://localhost:2000';
+                console.log('API URL set to default:', apiUrl);
+            }
         } else {
             document.getElementById('customApiUrl').style.display = 'none';
             apiUrl = e.target.value;
             console.log('API URL set to:', apiUrl); // Debug log
-            // Reload test cases if a problem is loaded (they may need to switch from local to GitHub or vice versa)
-            if (currentProblem) {
-                loadTestCases(currentProblem);
-            }
+        }
+        // Reload test cases if a problem is loaded (they may need to switch from local to GitHub or vice versa)
+        if (currentProblem) {
+            loadTestCases(currentProblem);
         }
     });
     document.getElementById('customApiUrl').addEventListener('input', (e) => {
@@ -592,6 +608,19 @@ async function submitCode() {
 }
 
 async function executeCode(code, input) {
+    // Validate API URL is set
+    if (!apiUrl || apiUrl.trim() === '') {
+        throw new Error('API URL is not set. Please select an API endpoint or enter a custom URL.');
+    }
+    
+    // Ensure apiUrl has a protocol
+    let validApiUrl = apiUrl.trim();
+    if (!validApiUrl.startsWith('http://') && !validApiUrl.startsWith('https://')) {
+        validApiUrl = 'https://' + validApiUrl;
+        apiUrl = validApiUrl; // Update the global variable
+        console.warn('API URL was missing protocol, added https://:', apiUrl);
+    }
+    
     const languageMap = {
         'cpp': { language: 'c++', version: '*' },  // Piston API uses 'c++' not 'cpp'
         'python': { language: 'python', version: '*' },
@@ -634,25 +663,64 @@ rl.on('line', (line) => {
         stdin: input
     };
     
-    const apiEndpoint = apiUrl.endsWith('/') ? apiUrl.slice(0, -1) : apiUrl;
-    const executeUrl = apiEndpoint.includes('emkc.org') 
-        ? `${apiEndpoint}/execute`
-        : `${apiEndpoint}/api/v2/execute`;
+    // Use the validated URL
+    const apiEndpoint = validApiUrl.endsWith('/') ? validApiUrl.slice(0, -1) : validApiUrl;
     
-    const response = await fetch(executeUrl, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(payload)
-    });
+    // If using Railway/custom API (not localhost), use proxy to avoid CORS
+    const isLocalhost = validApiUrl.includes('localhost') || validApiUrl.includes('127.0.0.1');
+    console.log('API URL check:', { validApiUrl, isLocalhost, apiEndpoint }); // Debug log
+    
+    let executeUrl;
+    
+    if (isLocalhost) {
+        // Direct connection for localhost
+        executeUrl = apiEndpoint.includes('emkc.org') 
+            ? `${apiEndpoint}/execute`
+            : `${apiEndpoint}/api/v2/execute`;
+        console.log('Using DIRECT connection (localhost):', executeUrl);
+    } else {
+        // Use proxy for Railway/custom APIs to avoid CORS
+        const apiPath = apiEndpoint.includes('emkc.org') 
+            ? '/execute'
+            : '/api/v2/execute';
+        executeUrl = `/api/proxy${apiPath}`;
+        console.log('Using PROXY for Railway API:', executeUrl);
+        console.log('Original Railway URL would be:', `${apiEndpoint}${apiPath}`);
+    }
+    
+    console.log('Final execute URL:', executeUrl); // Debug log
+    console.log('Payload:', JSON.stringify(payload, null, 2)); // Debug log
+    
+    let response;
+    try {
+        response = await fetch(executeUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload),
+            mode: 'cors' // Explicitly request CORS
+        });
+    } catch (error) {
+        // Handle network errors (CORS, connection refused, etc.)
+        console.error('Network error:', error);
+        if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
+            throw new Error(`Failed to connect to API at ${executeUrl}. This could be due to:\n1. CORS (Cross-Origin) restrictions - the API may not allow requests from localhost\n2. Network connectivity issues\n3. The API server may be down\n\nPlease check:\n- Is the Railway API URL correct?\n- Are you able to access ${executeUrl} directly in your browser?\n- Check the browser console for more details.`);
+        }
+        throw new Error(`Network error: ${error.message}. Please check your connection and API URL.`);
+    }
     
     if (!response.ok) {
         if (response.status === 429) {
             throw new Error('Rate limit exceeded. Please wait a moment and try again.');
         }
-        const errorText = await response.text();
-        throw new Error(`API error: ${response.status} ${response.statusText}. ${errorText}`);
+        let errorText = '';
+        try {
+            errorText = await response.text();
+        } catch (e) {
+            errorText = 'Could not read error response';
+        }
+        throw new Error(`API error: ${response.status} ${response.statusText}. ${errorText || 'No error details available'}`);
     }
     
     const data = await response.json();
