@@ -10,15 +10,18 @@ services:
     volumes:
       - ./language-packages:/piston/packages  # Bind mount for packages (will be populated from builder)
       - piston_jobs:/piston/jobs
+      - piston_isolate:/piston/isolate
     tmpfs:
       - /tmp
-      - /piston/isolate:exec,mode=1777,size=2g  # Use tmpfs for isolate (temporary execution environments)
+    working_dir: /piston
     environment:
       - PISTON_REPO_URL=https://github.com/engineer-man/piston
     entrypoint: ["/bin/sh", "-c"]
     command: |
+      # Ensure directories exist and are writable (volumes are auto-created but may need permissions)
       mkdir -p /piston/isolate /piston/jobs
       chmod -R 777 /piston/isolate /piston/jobs
+      # Start Piston
       exec /piston/piston
     restart: unless-stopped
     privileged: true  # Required for isolate to work properly
@@ -42,7 +45,7 @@ services:
 volumes:
   # piston_packages: Now using bind mount ./language-packages
   piston_jobs:
-  # piston_isolate: Using tmpfs instead for better performance and to avoid permission issues
+  piston_isolate:
 
 networks:
   piston-network:
