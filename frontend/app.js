@@ -268,6 +268,11 @@ function setupEventListeners() {
         } else {
             document.getElementById('customApiUrl').style.display = 'none';
             apiUrl = e.target.value;
+            console.log('API URL set to:', apiUrl); // Debug log
+            // Reload test cases if a problem is loaded (they may need to switch from local to GitHub or vice versa)
+            if (currentProblem) {
+                loadTestCases(currentProblem);
+            }
         }
     });
     document.getElementById('customApiUrl').addEventListener('input', (e) => {
@@ -277,8 +282,13 @@ function setupEventListeners() {
             url = 'https://' + url;
             e.target.value = url; // Update the input field
         }
+        const oldApiUrl = apiUrl;
         apiUrl = url || 'http://localhost:2000';
         console.log('API URL set to:', apiUrl); // Debug log
+        // Reload test cases if API URL changed and a problem is loaded
+        if (currentProblem && oldApiUrl !== apiUrl) {
+            loadTestCases(currentProblem);
+        }
     });
     document.getElementById('clearResults').addEventListener('click', () => {
         document.getElementById('resultsContent').innerHTML = '<p class="placeholder">Run or submit your code to see results here.</p>';
@@ -317,10 +327,20 @@ async function loadTestCases(problem) {
     if (problem.id === 1) {
         // Load from files for problem 1
         try {
+            // Determine test case base URL
+            // If using Railway/custom API, load from GitHub; otherwise use local paths
+            const isLocalhost = apiUrl.includes('localhost') || apiUrl.includes('127.0.0.1');
+            const testCaseBaseUrl = isLocalhost 
+                ? '/test_cases'  // Local server
+                : 'https://raw.githubusercontent.com/adpandeygrid/Coding_Engine/main/test_cases';  // GitHub raw URLs
+            
             for (let i = 1; i <= 11; i++) {
                 try {
-                    const inputResponse = await fetch(`/test_cases/input${i}.txt`);
-                    const outputResponse = await fetch(`/test_cases/output${i}.txt`);
+                    const inputUrl = `${testCaseBaseUrl}/input${i}.txt`;
+                    const outputUrl = `${testCaseBaseUrl}/output${i}.txt`;
+                    
+                    const inputResponse = await fetch(inputUrl);
+                    const outputResponse = await fetch(outputUrl);
                     
                     if (inputResponse.ok && outputResponse.ok) {
                         let input = await inputResponse.text();
@@ -329,7 +349,7 @@ async function loadTestCases(problem) {
                         input = input.trim();
                         // Store output as-is (with trailing newlines), normalization happens during comparison
                         // Debug: log what we're storing
-                        console.log(`Loaded test case ${i}:`, {
+                        console.log(`Loaded test case ${i} from ${isLocalhost ? 'local' : 'GitHub'}:`, {
                             input: input,
                             outputLength: output.length,
                             outputEndsWithNewline: output.endsWith('\n'),

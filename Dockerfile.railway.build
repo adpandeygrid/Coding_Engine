@@ -75,9 +75,11 @@ fi\n\
 chown -R piston:piston /piston 2>/dev/null || true\n\
 \n\
 # Start Piston API with Railway PORT support\n\
-# Railway provides PORT env var, Piston uses PORT env var if available\n\
+# Railway provides PORT env var, Piston uses PORT env var for bind_address\n\
 export PORT=${PORT:-2000}\n\
-exec su -- piston -c "ulimit -n 65536 && PORT=$PORT node /piston_api/src" "$@"' > /entrypoint.sh && \
+echo "Starting Piston API on port $PORT (Railway PORT=$PORT)"\n\
+# Pass PORT explicitly to ensure it's available to Node.js\n\
+exec su -- piston -c "ulimit -n 65536; export PORT=$PORT; node /piston_api/src" "$@"' > /entrypoint.sh && \
     chmod +x /entrypoint.sh
 
 ENTRYPOINT ["/entrypoint.sh"]
