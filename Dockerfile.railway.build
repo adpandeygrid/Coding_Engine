@@ -46,6 +46,8 @@ RUN find /piston/packages -name ".DS_Store" -delete 2>/dev/null || true
 # Expose port (Railway will provide PORT env var)
 EXPOSE 2000
 ENV PORT=2000
+# Disable cgroups for Railway (Railway doesn't support cgroups)
+ENV ISOLATE_NO_CG=1
 
 # Create a Railway-compatible entrypoint that handles cgroup limitations
 # Railway may not support cgroups, so we create a modified entrypoint
@@ -77,15 +79,18 @@ chown -R piston:piston /piston 2>/dev/null || true\n\
 # Start Piston API with Railway PORT support\n\
 # Railway provides PORT env var, Piston uses PORT env var for bind_address\n\
 export PORT=${PORT:-2000}\n\
+# Disable cgroups for Railway (Railway doesn't support cgroups)\n\
+export ISOLATE_NO_CG=1\n\
 echo "Starting Piston API on port $PORT (Railway PORT=$PORT)"\n\
+echo "Cgroups disabled for Railway (ISOLATE_NO_CG=1)"\n\
 echo "Checking isolate directory:"\n\
 ls -la /piston/isolate 2>&1 || echo "Isolate directory check failed"\n\
 echo "Checking jobs directory:"\n\
 ls -la /piston/jobs 2>&1 || echo "Jobs directory check failed"\n\
 echo "Testing isolate write permissions:"\n\
 touch /piston/isolate/test_write 2>&1 && rm -f /piston/isolate/test_write && echo "Write test: SUCCESS" || echo "Write test: FAILED"\n\
-# Pass PORT explicitly to ensure it's available to Node.js\n\
-exec su -- piston -c "ulimit -n 65536; export PORT=$PORT; node /piston_api/src" "$@"' > /entrypoint.sh && \
+# Pass PORT and ISOLATE_NO_CG explicitly to ensure they're available to Node.js\n\
+exec su -- piston -c "ulimit -n 65536; export PORT=$PORT; export ISOLATE_NO_CG=1; node /piston_api/src" "$@"' > /entrypoint.sh && \
     chmod +x /entrypoint.sh
 
 ENTRYPOINT ["/entrypoint.sh"]
