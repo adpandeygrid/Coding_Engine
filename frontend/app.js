@@ -271,7 +271,14 @@ function setupEventListeners() {
         }
     });
     document.getElementById('customApiUrl').addEventListener('input', (e) => {
-        apiUrl = e.target.value || 'http://localhost:2000';
+        let url = e.target.value.trim();
+        // If URL doesn't start with http:// or https://, add https://
+        if (url && !/^https?:\/\//.test(url)) {
+            url = 'https://' + url;
+            e.target.value = url; // Update the input field
+        }
+        apiUrl = url || 'http://localhost:2000';
+        console.log('API URL set to:', apiUrl); // Debug log
     });
     document.getElementById('clearResults').addEventListener('click', () => {
         document.getElementById('resultsContent').innerHTML = '<p class="placeholder">Run or submit your code to see results here.</p>';
