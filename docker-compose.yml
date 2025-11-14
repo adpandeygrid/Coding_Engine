@@ -13,6 +13,7 @@ services:
       - piston_isolate:/piston/isolate
     environment:
       - PISTON_REPO_URL=https://github.com/engineer-man/piston
+    command: sh -c "mkdir -p /piston/isolate && chmod 777 /piston/isolate && exec /piston/piston"
     restart: unless-stopped
     privileged: true  # Required for isolate to work properly
     networks:
