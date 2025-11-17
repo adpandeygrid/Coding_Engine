@@ -1,0 +1,61 @@
+# Dockerfile for Azure deployment
+# Azure Container Instances supports privileged containers, so isolate should work
+
+FROM ghcr.io/engineer-man/piston:latest
+
+# Create packages directory first
+RUN mkdir -p /piston/packages
+
+# Copy pre-installed packages (if available in build context)
+COPY language-packages/ /piston/packages/
+
+# Fix Java permission issues (remove problematic files)
+RUN if [ -d "/piston/packages/java" ] && [ "$(ls -A /piston/packages/java)" ]; then \
+        find /piston/packages/java -name "*.jsa" -delete 2>/dev/null || true && \
+        rm -rf /piston/packages/java/*/legal 2>/dev/null || true; \
+    fi
+
+# Create isolate and jobs directories with proper permissions
+RUN mkdir -p /piston/isolate /piston/jobs && \
+    chmod -R 777 /piston/isolate /piston/jobs
+
+# Remove any .DS_Store files that might cause issues
+RUN find /piston/packages -name ".DS_Store" -delete 2>/dev/null || true
+
+# Expose port
+EXPOSE 2000
+ENV PORT=2000
+
+# Create entrypoint (Azure may support cgroups, but we'll handle both cases)
+RUN echo '#!/bin/bash\n\
+# Create piston directories\n\
+mkdir -p /piston/isolate /piston/jobs\n\
+chmod 777 /piston/isolate /piston/jobs 2>/dev/null || true\n\
+\n\
+# Try to set up cgroups (Azure may support it)\n\
+CGROUP_FS="/sys/fs/cgroup"\n\
+if [ -e "$CGROUP_FS" ] && [ ! -e "$CGROUP_FS/unified" ] && [ -e "$CGROUP_FS/cgroup.subtree_control" ]; then\n\
+    cd /sys/fs/cgroup && \\\n\
+    mkdir -p isolate/ 2>/dev/null && \\\n\
+    echo 1 > isolate/cgroup.procs 2>/dev/null && \\\n\
+    echo "+cpuset +cpu +io +memory +pids" > cgroup.subtree_control 2>/dev/null && \\\n\
+    cd isolate && \\\n\
+    mkdir -p init 2>/dev/null && \\\n\
+    echo 1 > init/cgroup.procs 2>/dev/null && \\\n\
+    echo "+cpuset +memory" > cgroup.subtree_control 2>/dev/null && \\\n\
+    echo "Initialized cgroup" || echo "Cgroup setup skipped"\n\
+else\n\
+    echo "Cgroup v2 not available, isolate will work without cgroups"\n\
+fi\n\
+\n\
+# Set ownership\n\
+chown -R piston:piston /piston 2>/dev/null || true\n\
+\n\
+# Start Piston API\n\
+export PORT=${PORT:-2000}\n\
+echo "Starting Piston API on port $PORT"\n\
+exec su -- piston -c "ulimit -n 65536; export PORT=$PORT; node /piston_api/src" "$@"' > /entrypoint.sh && \
+    chmod +x /entrypoint.sh
+
+ENTRYPOINT ["/entrypoint.sh"]
+
